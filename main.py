@@ -11,6 +11,7 @@ import pystray
 from pystray import MenuItem as item
 import threading
 import winreg
+import subprocess
 
 # Windows API constants for click-through
 GWL_EXSTYLE = -20
@@ -114,7 +115,16 @@ class CrosshairOverlay(tk.Toplevel):
 class ControlPanel:
     def __init__(self):
         self.root = tk.Tk()
-        self.root.title("moligod小工具-自定义准信")
+        
+        # Check Admin Status
+        self.is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+        title = "moligod小工具"
+        if self.is_admin:
+            title += " - 管理员模式"
+        else:
+            title += " - 非管理员模式"
+            
+        self.root.title(title)
         try:
             self.root.iconbitmap(self.resource_path("tx.ico"))
         except:
@@ -141,7 +151,8 @@ class ControlPanel:
             'color': tk.StringVar(value="#00FF00"),
             'dot': tk.IntVar(value=4),
             'style': tk.StringVar(value="十字"),
-            'image_path': tk.StringVar(value="")
+            'image_path': tk.StringVar(value=""),
+            'force_admin': tk.BooleanVar(value=False)
         }
         
         self.presets = {}
@@ -230,6 +241,32 @@ class ControlPanel:
         # Run tray icon in a separate thread to avoid blocking main loop
         threading.Thread(target=self.tray_icon.run, daemon=True).start()
 
+    def restart_as_admin(self):
+        try:
+            # Set force_admin to True and save config
+            self.config['force_admin'].set(True)
+            self.save_config()
+            
+            # Re-run the program with admin rights
+            ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+            sys.exit() # Directly exit without calling quit_application again which saves config
+        except Exception as e:
+            messagebox.showerror("错误", f"无法以管理员身份重启：{e}")
+
+    def restart_as_normal(self):
+        try:
+            # Set force_admin to False and save config
+            self.config['force_admin'].set(False)
+            self.save_config()
+            
+            # Use explorer to launch the app, which typically de-elevates to user level
+            # Quote the path to handle spaces
+            exe_path = f'"{sys.executable}"'
+            subprocess.Popen(f'explorer {exe_path}', shell=True)
+            sys.exit() # Directly exit
+        except Exception as e:
+            messagebox.showerror("错误", f"无法重启：{e}")
+
     def quit_application(self):
         self.save_config()
         self.root.quit()
@@ -280,11 +317,16 @@ class ControlPanel:
         y_entry = tk.Entry(pos_frame, textvariable=self.pos_y, width=10)
         y_entry.grid(row=0, column=3, padx=5, sticky="ew")
         
-        ttk.Button(pos_frame, text="居中", command=self.center_pos).grid(row=1, column=0, columnspan=4, pady=5, sticky="ew", padx=5)
+        # Center and Drag buttons in same row
+        ctrl_btn_frame = ttk.Frame(pos_frame)
+        ctrl_btn_frame.grid(row=1, column=0, columnspan=4, pady=5, sticky="ew", padx=5)
+        ctrl_btn_frame.columnconfigure(0, weight=1)
+        ctrl_btn_frame.columnconfigure(1, weight=1)
+
+        ttk.Button(ctrl_btn_frame, text="居中", command=self.center_pos).grid(row=0, column=0, sticky="ew", padx=2)
         
-        # Hold to drag button
-        drag_btn = ttk.Button(pos_frame, text="按住拖动准心")
-        drag_btn.grid(row=2, column=0, columnspan=4, pady=5, sticky="ew", padx=5)
+        drag_btn = ttk.Button(ctrl_btn_frame, text="按住拖动准心")
+        drag_btn.grid(row=0, column=1, sticky="ew", padx=2)
         drag_btn.bind("<ButtonPress-1>", self.drag_start)
         drag_btn.bind("<B1-Motion>", self.drag_move)
         
@@ -319,17 +361,25 @@ class ControlPanel:
         sys_frame.pack(fill="x", padx=10, pady=10)
         sys_frame.columnconfigure(0, weight=1)
         sys_frame.columnconfigure(1, weight=1)
+        sys_frame.columnconfigure(2, weight=1)
         
         ttk.Button(sys_frame, text="隐藏到托盘", command=self.minimize_to_tray).grid(row=0, column=0, sticky="ew", padx=2)
+        
         self.startup_btn = ttk.Button(sys_frame, text="开机自启：关", command=self.toggle_startup)
         self.startup_btn.grid(row=0, column=1, sticky="ew", padx=2)
+        
+        if not self.is_admin:
+             ttk.Button(sys_frame, text="管理员启动", command=self.restart_as_admin).grid(row=0, column=2, sticky="ew", padx=2)
+        else:
+             ttk.Button(sys_frame, text="取消管理员", command=self.restart_as_normal).grid(row=0, column=2, sticky="ew", padx=2)
         
         # Check initial startup status
         self.check_startup()
         
         # Status
         self.status_label = ttk.Label(self.root, text="作者moligod（B站抖音快手小红书同名）炸撤离点群727712220", foreground="green")
-        self.status_label.pack(side="bottom", pady=5)
+        self.status_label.pack(side="bottom", pady=(0, 5))
+        ttk.Label(self.root, text="如若出现问题优先管理员启动", foreground="red").pack(side="bottom", pady=(5, 0))
 
     def add_slider(self, parent, label, var, min_val, max_val, row):
         ttk.Label(parent, text=label).grid(row=row, column=0, padx=5, pady=2)
@@ -579,6 +629,7 @@ class ControlPanel:
                     self.config['dot'].set(data.get("dot", 4))
                     self.config['style'].set(data.get("style", "十字"))
                     self.config['image_path'].set(data.get("image_path", ""))
+                    self.config['force_admin'].set(data.get("force_admin", False))
                     
                     self.presets = data.get("presets", {})
             except Exception as e:
@@ -601,6 +652,7 @@ class ControlPanel:
             "dot": self.config['dot'].get(),
             "style": self.config['style'].get(),
             "image_path": self.config['image_path'].get(),
+            "force_admin": self.config['force_admin'].get(),
             "presets": self.presets
         }
         try:
@@ -609,5 +661,30 @@ class ControlPanel:
         except Exception as e:
             print(f"Error saving config: {e}")
 
+def check_force_admin():
+    # Helper to check config file before initializing UI
+    try:
+        # Re-use logic to get config path (duplicated briefly for standalone function)
+        app_data = os.getenv('LOCALAPPDATA')
+        if not app_data: app_data = os.path.expanduser('~')
+        config_path = os.path.join(app_data, 'MoligodCrosshair', 'config.json')
+        
+        if os.path.exists(config_path):
+            with open(config_path, "r", encoding='utf-8') as f:
+                data = json.load(f)
+                return data.get("force_admin", False)
+    except:
+        pass
+    return False
+
 if __name__ == "__main__":
-    ControlPanel()
+    # Check if we should force admin
+    should_be_admin = check_force_admin()
+    is_admin = ctypes.windll.shell32.IsUserAnAdmin()
+    
+    if should_be_admin and not is_admin:
+        # Relaunch as admin
+        ctypes.windll.shell32.ShellExecuteW(None, "runas", sys.executable, " ".join(sys.argv), None, 1)
+        sys.exit()
+    else:
+        ControlPanel()

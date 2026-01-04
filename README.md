@@ -1,53 +1,69 @@
-# DIY FPS Crosshair
+# Aim-DiyBot 自定义准心工具
 
-This is a lightweight, portable, and customizable crosshair overlay for FPS games. It uses Python and Tkinter to create a transparent window that sits on top of your game.
+一个轻量级、功能强大的 FPS 游戏准心辅助工具。无论你是想在没有准心的游戏中获得优势，还是想替换游戏中原本糟糕的准心，Aim-DiyBot 都能满足你的需求。
 
-## Features
+## ✨ 主要功能
 
-- **Always on Top**: Stays visible over your game (Fullscreen Borderless / Windowed mode recommended).
-- **Click-Through**: The overlay ignores mouse clicks so you can play your game without interference.
-- **Customizable**:
-  - Position (X/Y coordinates)
-  - Color
-  - Size and Thickness
-  - Style (Cross, Dot, Circle, or combined)
-- **Portable**: Single Python script.
-- **Persistent**: Saves your settings to `config.json`.
+*   **🎨 多种样式**：支持十字、圆点、圆圈、混合模式，甚至可以使用**自定义图片**作为准心。
+*   **🖼️ 自定义图片**：支持导入 PNG/GIF 等格式图片作为准心，完美支持中文路径。
+*   **🛠️ 高度可调**：可随意调节准心的大小、粗细、颜色、圆点大小等参数。
+*   **📍 自由定位**：
+    *   **按住拖动**：直接用鼠标按住按钮拖动准心到任意位置。
+    *   **微调坐标**：支持输入精确坐标，或使用方向键进行像素级微调。
+    *   **一键居中**：一键让准心回到屏幕正中央。
+*   **💾 方案管理**：
+    *   **保存预设**：保存多套准心方案（如“步枪”、“狙击”），随时切换。
+    *   **分享与导入**：支持将方案导出为 JSON 文件分享给好友，或导入别人的神级准心。
+*   **🚀 便捷体验**：
+    *   **开机自启**：支持设置随系统启动，开机即用。
+    *   **托盘运行**：支持最小化到系统托盘，不占用任务栏空间，游戏更沉浸。
+    *   **管理员记忆**：支持一键切换并记忆管理员模式，确保在所有环境中稳定运行。
+    *   **鼠标穿透**：准心图层完全鼠标穿透，绝对不会影响游戏操作。
+*   **📦 绿色单文件**：所有配置保存在本地 AppData，主程序仅一个 EXE 文件，随处运行。
 
-## Requirements
+## 📥 下载与安装
 
-- Python 3.x installed.
-- Windows OS (uses Windows API for click-through functionality).
+1.  在 [Releases](https://github.com/moligod/Aim-DiyBot/releases) 页面下载最新的 `MoliCrosshair.exe`。
+2.  直接双击运行即可，无需安装。
 
-## How to Run
+## 📖 使用指南
 
-1. Open a terminal or command prompt in this folder.
-2. Run the script:
-   ```bash
-   python main.py
-   ```
-3. A "Crosshair Settings" window will appear, along with the crosshair overlay (defaulted to the center of your screen).
+### 1. 基础设置
+打开软件后，你可以通过控制面板调整准心的**样式**、**颜色**和**尺寸**。调整会实时反馈在屏幕上。
 
-## Usage
+### 2. 调整位置
+*   **拖动模式**：点击并按住“**按住拖动准心**”按钮，鼠标移动到哪里，准心就跟到哪里。
+*   **精确输入**：在 X/Y 输入框中直接输入数字，或者点击输入框后使用键盘上下左右键微调。
+*   **一键居中**：点击“居中”按钮快速复位。
 
-1. **Adjust Position**:
-   - Use the **Arrow Keys** while the "Crosshair Settings" window is focused to nudge the crosshair 1 pixel at a time.
-   - Enter coordinates manually in the X/Y fields and click "Apply Pos".
-   - Click "Center" to reset to the middle of the screen.
+### 3. 预设方案
+*   **保存**：调整好满意的准心后，在方案框输入名字，点击“保存”。
+*   **加载**：在下拉框选择已保存的方案即可一键切换。
+*   **分享**：点击“分享”按钮，生成一个 `.json` 配置文件发给朋友。
+*   **导入**：点击“导入”按钮，选择朋友发给你的配置文件即可。
 
-2. **Customize Style**:
-   - Change the Type (Cross, Dot, Circle).
-   - Pick a Color.
-   - Adjust sliders for Size, Thickness, and Dot Size.
+### 4. 托盘与自启
+*   点击“**隐藏到托盘**”或直接点击窗口右上角的 **X**，软件会隐藏到系统右下角托盘区（小图标）。
+*   在托盘图标上**右键**可以退出程序或显示设置窗口。
+*   点击“**开机自启**”按钮，可以让软件随 Windows 一同启动。
 
-3. **Playing**:
-   - Once set up, you can minimize the "Crosshair Settings" window.
-   - Click on your game window. The crosshair will remain visible and will not block your mouse input.
+### 5. 管理员模式
+*   如果遇到准心不显示或开机自启失效，建议使用管理员模式。
+*   点击底部的“**管理员启动**”按钮，软件会自动重启并提权。
+*   **记忆功能**：一旦开启，软件会记住你的选择，下次启动（包括开机自启）都会自动以管理员身份运行。
+*   如需关闭，点击“**取消管理员**”按钮即可。
 
-4. **Closing**:
-   - Click "Close Crosshair" in the settings window or simply close the settings window.
-   - Your settings will be saved automatically.
+## ⚠️ 注意事项
 
-## Note on Fullscreen Games
+*   **优先管理员启动**：如若出现准心被游戏覆盖、开机自启不生效等问题，请**优先点击“管理员启动”**。
+*   **游戏模式**：请将游戏设置为 **无边框窗口化 (Borderless Windowed)** 或 **窗口化** 模式。在部分游戏的“独占全屏”模式下，准心可能会被游戏画面覆盖。
+*   **安全性**：本工具仅为屏幕中心物理覆盖层（类似于在显示器上贴胶带），不读取游戏内存，不修改游戏文件，理论上极其安全。但请遵循各游戏的使用协议。
 
-This overlay works best with games running in **Borderless Windowed** or **Windowed** mode. Exclusive Fullscreen mode in some games might override the "Always on Top" property of the overlay.
+## 👨‍💻 作者与联系
+
+*   **作者**：moligod
+*   **社交媒体**：B站 / 抖音 / 快手 / 小红书 同名搜索 **moligod**
+*   **交流群**：炸撤离点群 **727712220**
+
+---
+*Made with ❤️ by moligod*

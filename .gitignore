@@ -5,3 +5,4 @@ __pycache__/
 build_venv/
 .vscode/
 config.json
+venv_clean/

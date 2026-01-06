@@ -12,6 +12,7 @@ from pystray import MenuItem as item
 import threading
 import winreg
 import subprocess
+import keyboard
 
 # Windows API constants for click-through
 GWL_EXSTYLE = -20
@@ -49,9 +50,26 @@ class CrosshairOverlay(tk.Toplevel):
         self.after(100, self.apply_click_through)
         
         self.image_ref = None
+        
+        # Start keep-on-top loop
+        self.keep_on_top()
 
     def config_bg(self, color):
         self.configure(bg=color)
+
+    def keep_on_top(self):
+        """Periodically enforce topmost status to fight against some window managers"""
+        try:
+            self.wm_attributes("-topmost", True)
+            # Optional: Use Windows API to force topmost without activating
+            hwnd = self.winfo_id()
+            if hwnd:
+                # HWND_TOPMOST = -1
+                # SWP_NOMOVE(2) | SWP_NOSIZE(1) | SWP_NOACTIVATE(10) = 0x13
+                ctypes.windll.user32.SetWindowPos(hwnd, -1, 0, 0, 0, 0, 0x0013)
+        except Exception:
+            pass
+        self.after(2000, self.keep_on_top)
 
     def apply_click_through(self):
         try:
@@ -129,7 +147,7 @@ class ControlPanel:
             self.root.iconbitmap(self.resource_path("tx.ico"))
         except:
             pass
-        self.root.geometry("360x540")
+        self.root.geometry("360x560")
         self.root.resizable(False, False)
         
         self.overlay = None
@@ -152,11 +170,13 @@ class ControlPanel:
             'dot': tk.IntVar(value=4),
             'style': tk.StringVar(value="十字"),
             'image_path': tk.StringVar(value=""),
-            'force_admin': tk.BooleanVar(value=False)
+            'force_admin': tk.BooleanVar(value=False),
+            'hide_hotkey': tk.StringVar(value="")
         }
         
         self.presets = {}
         self.current_preset_name = tk.StringVar()
+        self.crosshair_visible = True
         
         self.load_config()
         
@@ -376,10 +396,99 @@ class ControlPanel:
         # Check initial startup status
         self.check_startup()
         
+        # Hotkey Frame
+        hk_frame = ttk.Frame(self.root)
+        hk_frame.pack(fill="x", padx=10, pady=5)
+        hk_frame.columnconfigure(0, weight=1)
+        hk_frame.columnconfigure(1, weight=1)
+        
+        self.toggle_btn = ttk.Button(hk_frame, text="点击隐藏准星", command=self.toggle_crosshair_visible)
+        self.toggle_btn.grid(row=0, column=0, sticky="ew", padx=2)
+        
+        self.hotkey_btn = ttk.Button(hk_frame, text="绑定隐藏准星键", command=self.bind_hotkey)
+        self.hotkey_btn.grid(row=0, column=1, sticky="ew", padx=2)
+        
+        # Update button text if hotkey exists
+        if self.config['hide_hotkey'].get():
+            self.hotkey_btn.configure(text=f"快捷键: {self.config['hide_hotkey'].get()}")
+            try:
+                keyboard.add_hotkey(self.config['hide_hotkey'].get(), self.toggle_crosshair_visible)
+            except Exception as e:
+                print(f"Error registering hotkey: {e}")
+
         # Status
         self.status_label = ttk.Label(self.root, text="作者moligod（B站抖音快手小红书同名）炸撤离点群727712220", foreground="green")
         self.status_label.pack(side="bottom", pady=(0, 5))
-        ttk.Label(self.root, text="如若出现问题优先管理员启动", foreground="red").pack(side="bottom", pady=(5, 0))
+        ttk.Label(self.root, text="如若出现问题优先管理员启动，游戏内用快捷键必须管理员启动", foreground="red").pack(side="bottom", pady=(5, 0))
+
+    def toggle_crosshair_visible(self):
+        if not self.overlay:
+            return
+            
+        if self.crosshair_visible:
+            self.overlay.withdraw()
+            self.crosshair_visible = False
+            self.toggle_btn.configure(text="点击显示准星")
+        else:
+            self.overlay.deiconify()
+            self.overlay.keep_on_top()
+            self.crosshair_visible = True
+            self.toggle_btn.configure(text="点击隐藏准星")
+
+    def bind_hotkey(self):
+        self.hotkey_btn.configure(text="按键 (ESC取消)...")
+        self.root.update()
+        
+        def on_key(event):
+            # Unhook first
+            keyboard.unhook(hook_id)
+            
+            key_name = event.name
+            
+            # Check for ESC to clear hotkey
+            if key_name.lower() == 'esc':
+                # Remove existing hotkey if any
+                old_hotkey = self.config['hide_hotkey'].get()
+                if old_hotkey:
+                    try:
+                        keyboard.remove_hotkey(old_hotkey)
+                    except:
+                        pass
+                
+                # Clear config and UI
+                self.config['hide_hotkey'].set("")
+                self.hotkey_btn.configure(text="绑定隐藏准星键")
+                self.save_config()
+                return
+            
+            # Remove old hotkey if exists
+            old_hotkey = self.config['hide_hotkey'].get()
+            if old_hotkey:
+                try:
+                    keyboard.remove_hotkey(old_hotkey)
+                except:
+                    pass
+            
+            # Set new hotkey
+            self.config['hide_hotkey'].set(key_name)
+            self.hotkey_btn.configure(text=f"快捷键: {key_name}")
+            
+            # Register new hotkey
+            try:
+                keyboard.add_hotkey(key_name, self.toggle_crosshair_visible)
+            except Exception as e:
+                messagebox.showerror("错误", f"无法绑定快捷键: {e}")
+                self.hotkey_btn.configure(text="绑定隐藏准星键")
+                self.config['hide_hotkey'].set("")
+            
+            # Save config immediately
+            self.save_config()
+
+        # Hook a single key press
+        def safe_on_key(event):
+             self.root.after(0, lambda: on_key(event))
+
+        hook_id = keyboard.on_press(safe_on_key)
 
     def add_slider(self, parent, label, var, min_val, max_val, row):
         ttk.Label(parent, text=label).grid(row=row, column=0, padx=5, pady=2)
@@ -630,6 +739,7 @@ class ControlPanel:
                     self.config['style'].set(data.get("style", "十字"))
                     self.config['image_path'].set(data.get("image_path", ""))
                     self.config['force_admin'].set(data.get("force_admin", False))
+                    self.config['hide_hotkey'].set(data.get("hide_hotkey", ""))
                     
                     self.presets = data.get("presets", {})
             except Exception as e:
@@ -653,6 +763,7 @@ class ControlPanel:
             "style": self.config['style'].get(),
             "image_path": self.config['image_path'].get(),
             "force_admin": self.config['force_admin'].get(),
+            "hide_hotkey": self.config['hide_hotkey'].get(),
             "presets": self.presets
         }
         try:
